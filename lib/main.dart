@@ -30,9 +30,9 @@ class TodoItem extends StatelessWidget {
       onTap: () {
         onTodoChanged(todo);
       },
-      leading: CircleAvatar(
-        child: Text(todo.name[0]),
-      ),
+      leading: Icon(
+          todo.checked ? Icons.check_box : Icons.check_box_outline_blank,
+          color: todo.checked ? Colors.blue : Colors.grey),
       title: Text(todo.name, style: _getTextStyle(todo.checked)),
     );
   }
