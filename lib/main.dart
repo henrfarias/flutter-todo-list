@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class Todo {
   Todo({required this.name, required this.checked});
@@ -38,67 +39,62 @@ class TodoItem extends StatelessWidget {
   }
 }
 
-class TodoList extends StatefulWidget {
-  @override
-  _TodoListState createState() => new _TodoListState();
-}
-
-class _TodoListState extends State<TodoList> {
-  final TextEditingController _textFieldController = TextEditingController();
-  final List<Todo> _todos = <Todo>[];
+class TodoList extends StatelessWidget {
+  final List<Todo> todos = <Todo>[];
+  final Controller controller = Get.put(Controller());
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-        title: new Text('Todo list'),
+        title: Obx(() => Text(
+            "Todos: ${controller.closedTodosCount}/${controller.todosCount}")),
       ),
-      body: ListView(
-        padding: EdgeInsets.symmetric(vertical: 8.0),
-        children: _todos.map((Todo todo) {
-          return TodoItem(
-            todo: todo,
-            onTodoChanged: _handleTodoChange,
-          );
-        }).toList(),
-      ),
+      body: Obx(() => ListView(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            children: controller.list.map((Todo todo) {
+              return TodoItem(
+                todo: todo,
+                onTodoChanged: handleTodoChange,
+              );
+            }).toList(),
+          )),
       floatingActionButton: FloatingActionButton(
-          onPressed: () => _displayDialog(),
+          onPressed: () => displayDialog(context),
           tooltip: 'Add Item',
           child: Icon(Icons.add)),
     );
   }
 
-  void _handleTodoChange(Todo todo) {
-    setState(() {
-      todo.checked = !todo.checked;
-    });
+  void handleTodoChange(Todo todo) {
+    todo.checked = !todo.checked;
+    controller.setClosedTodos();
+    controller.list.refresh();
   }
 
-  void _addTodoItem(String name) {
-    setState(() {
-      _todos.add(Todo(name: name, checked: false));
-    });
-    _textFieldController.clear();
+  void addTodoItem(String name) {
+    controller.list.add(Todo(name: name, checked: false));
+    controller.setTodos();
+    controller.textController.clear();
   }
 
-  Future<void> _displayDialog() async {
+  Future<void> displayDialog(BuildContext context) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false, // user must tap button!
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Add a new todo item'),
+          title: const Text('Adicionar nova tarefa'),
           content: TextField(
-            controller: _textFieldController,
-            decoration: const InputDecoration(hintText: 'Type your new todo'),
+            controller: controller.textController,
+            decoration: const InputDecoration(hintText: 'Escreva sua tarefa'),
           ),
           actions: <Widget>[
             TextButton(
               child: const Text('Add'),
               onPressed: () {
-                Navigator.of(context).pop();
-                _addTodoItem(_textFieldController.text);
+                Get.back();
+                addTodoItem(controller.textController.text);
               },
             ),
           ],
@@ -111,11 +107,22 @@ class _TodoListState extends State<TodoList> {
 class TodoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return new MaterialApp(
-      title: 'Todo list',
+    return new GetMaterialApp(
+      title: "Todos",
       home: new TodoList(),
     );
   }
 }
 
 void main() => runApp(new TodoApp());
+
+class Controller extends GetxController {
+  final TextEditingController textController = TextEditingController();
+  Rx<int> closedTodosCount = 0.obs;
+  Rx<int> todosCount = 0.obs;
+  RxList<Todo> list = <Todo>[].obs;
+
+  setClosedTodos() => closedTodosCount.value =
+      list.where((todo) => todo.checked == true).toList().length;
+  setTodos() => todosCount.value = list.length;
+}
